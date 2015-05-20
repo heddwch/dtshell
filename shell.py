@@ -22,15 +22,16 @@ def pipe_exec(out_command, in_command, readfd, writefd):
     if pid2 == 0:
       os.dup2(writefd, sys.stdout.fileno())
       execute(out_command)
-      os.close(readfd)
 
     else:
       os.wait()
+      os.close(writefd)
       os.dup2(readfd, sys.stdin.fileno())
       execute(in_command)
 
   else:
     os.wait()
+    os.close(readfd)
 
 def main():
   while True:
@@ -62,10 +63,3 @@ def main():
 
 if __name__ == "__main__":
   main()
-
-"""
-<geirha> and once the pipe is created, you fork, and inside the child, connect stdout to the writing end of the pipe with dup2(), then execve the command.  In the parent you fork again, and in the child connect stdin to the reading end of the pipe and execve
-<geirha> oh yeah, and in the first child, you close the reading end of the pipe. and in the second child, close the writing end of the pipe
-<dtscode> Oh wait I need to pipe before I fork?
-<greycat> that's how both children have access to the same pipeline
-"""
