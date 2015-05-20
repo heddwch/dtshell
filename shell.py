@@ -2,42 +2,69 @@
 
 import os, sys
 
-while True:
-  line = input('dtshell$ ')
-  args = line.split(' ')
+def execute(args=list):
+  if args[0] == 'cd':
+    os.chdir(args[1])
 
-  if args[0] == 'exit':
-    sys.exit()
+  else:
+    output_file = ''
 
+    if len(args) > 1 and args[-2] == '>':
+      output_file = args[-1]
+      args = args[:-2]
+      file_descriptor = open(output_file, "w+")
+      os.dup2(file_descriptor.fileno(), sys.stdout.fileno())
+
+  os.execvp(args[0], args)
+
+def pipe_exec(out_command, in_command, readfd, writefd):
   pid = os.fork()
 
   if pid == 0:
-    if args[0] == 'cd':
-      os.chdir(args[1])
-
-    else:
-      output_file = ''
-      non_piped_command = True
-
-      if len(args) > 1 and args[-2] == '>':
-        output_file = args[-1]
-        args = args[:-2]
-        file_descriptor = open(output_file, "w+")
-        os.dup2(file_descriptor.fileno(), sys.stdout.fileno())
-
-      elif len(args) > 1 and '|' in args:
-        pipe_location = args.index('|')
-        out_command = args[:pipe_location]
-        in_command = args[pipe_location+1:]
-        read, write = os.pipe()
-        os.dup2(read, sys.stdout.fileno())
-        os.execvp(out_command[0], out_command)
-        os.dup2(write, sys.stdin.fileno())
-        os.execvp(in_command[0], in_command)
-        non_piped_command = False
-
-    if non_piped_command:
-      os.execvp(args[0], args)
+    os.dup2(writefd, sys.stdout.fileno())
+    execute(out_command)
+    os.close(readfd)
 
   else:
-    os.wait()
+    pid2 = os.fork()
+
+    if pid2 == 0:
+      os.dup2(readfd, sys.stdin.fileno())
+      execute(in_command)
+      os.close(writefd)
+
+    else:
+      os.wait()
+  
+
+def main():
+  while True:
+    line = input('dtshell$ ')
+    args = line.split(' ')
+
+    if args[0] == 'exit':
+      sys.exit()
+
+    if '|' in args:
+      read, write = os.pipe()
+      pipe_location = args.index('|')
+      pipe_exec(args[:pipe_location], args[pipe_location+1:], read, write)
+
+    else:
+      pid = os.fork()
+
+      if pid == 0:
+        execute(args)
+
+      else:
+        os.wait()
+
+if __name__ == "__main__":
+  main()
+
+"""
+<geirha> and once the pipe is created, you fork, and inside the child, connect stdout to the writing end of the pipe with dup2(), then execve the command.  In the parent you fork again, and in the child connect stdin to the reading end of the pipe and execve
+<geirha> oh yeah, and in the first child, you close the reading end of the pipe. and in the second child, close the writing end of the pipe
+<dtscode> Oh wait I need to pipe before I fork?
+<greycat> that's how both children have access to the same pipeline
+"""
