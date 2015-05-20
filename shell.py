@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 
 import os, sys
+import signal
+
+def hook_c(signal, frame):
+  print('^c')
+
+signal.signal(signal.SIGINT, hook_c)
 
 while True:
   line = input('dtshell$ ')
