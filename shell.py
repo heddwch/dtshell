@@ -26,6 +26,7 @@ def pipe_exec(out_command, in_command, readfd, writefd):
     os.close(readfd)
 
   else:
+    os.wait()
     pid2 = os.fork()
 
     if pid2 == 0:
