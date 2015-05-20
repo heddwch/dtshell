@@ -9,13 +9,13 @@ while True:
   pid = os.fork()
 
   if pid == 0:
-    redirect = False
-    outputFile = ''
-    for arg in args:
-      if arg == '>':
-        redirect = True
-      if redirect:
-        outputFile = arg
+    output_file = ''
+
+    if len(args) > 1 and args[-2] == '>':
+      output_file = args[-1]
+      args = args[:-2]
+      file_descriptor = open(output_file, "w+")
+      os.dup2(file_descriptor.fileno(), 1)
 
     os.execvp(args[0], args)
 
