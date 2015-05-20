@@ -30,8 +30,9 @@ def pipe_exec(out_command, in_command, readfd, writefd):
       execute(in_command)
 
   else:
-    os.wait()
     os.close(readfd)
+    os.close(writefd)
+    os.wait()
 
 def main():
   while True:
