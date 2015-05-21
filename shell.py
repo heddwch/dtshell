@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
 import os, sys
+import signal
+
+def signal_handler(signum, frame):
+  return True
 
 def execute(args=list):
   output_file = ''
@@ -8,7 +12,7 @@ def execute(args=list):
   if len(args) > 1 and args[-2] == '>':
     output_file = args[-1]
     args = args[:-2]
-    file_descriptor = open(output_file, "w+")
+    file_descriptor = open(output_file, "w")
     os.dup2(file_descriptor.fileno(), sys.stdout.fileno())
 
   os.execvp(args[0], args)
@@ -35,6 +39,8 @@ def pipe_exec(out_command, in_command, readfd, writefd):
     os.wait()
 
 def main():
+  signal.signal(signal.SIGINT, signal_handler)
+
   while True:
     line = input('dtshell$ ')
     args = line.split(' ')
